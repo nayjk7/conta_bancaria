@@ -13,17 +13,17 @@ import java.util.List;
 
 public record ClienteRegistroDTO(
         @NotBlank
-        @Schema(description = "Nome completo do cliente", example = "João da Silva")
+        @Schema(description = "Nome completo do cliente", example = "Nayara Soares")
         String nome,
         @NotBlank
         @CPF
         @Schema(description = "CPF do cliente (formatado ou não)", example = "123.456.789-00")
         String cpf,
         @NotBlank
-        @Schema(description = "Email do cliente (será usado para login)", example = "joao.silva@email.com")
+        @Schema(description = "Email do cliente (será usado para login)", example = "nayara.soares@email.com")
         String email,
         @NotBlank
-        @Schema(description = "Senha de acesso do cliente", example = "senhaForte123")
+        @Schema(description = "Senha de acesso do cliente", example = "senha123")
         String senha,
 
         @Schema(description = "Dados da primeira conta a ser criada para este cliente")

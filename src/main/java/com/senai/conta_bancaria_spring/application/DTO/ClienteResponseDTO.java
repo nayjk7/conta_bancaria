@@ -14,13 +14,13 @@ public record ClienteResponseDTO(
         @Schema(description = "ID único do cliente", example = "a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8")
         String id,
         @NotBlank
-        @Schema(description = "Nome do cliente", example = "João da Silva")
+        @Schema(description = "Nome do cliente", example = "Nayara Soares")
         String nome,
         @CPF
         @Schema(description = "CPF do cliente", example = "123.456.789-00")
         String cpf,
         @NotBlank
-        @Schema(description = "Email de login do cliente", example = "joao.silva@email.com")
+        @Schema(description = "Email de login do cliente", example = "nayara.soares@email.com")
         String email,
         @NotBlank
         @Schema(description = "Senha criptografada (apenas para referência, não usar)")
