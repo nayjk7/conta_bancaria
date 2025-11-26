@@ -35,7 +35,7 @@ public class MqttController {
                 .mensagem("SOLICITAR_BIOMETRIA")
                 .build();
     }
-    @MqttSubscriber("banco/validacao") // Tópico onde os dispositivos enviam respostas
+    @MqttSubscriber("banco/validacao")
     public void receberConfirmacaoBiometria(@MqttPayload ValidacaoAuthDTO dto) {
         System.out.println("Payload recebido via MQTT: " + dto);
         ioTService.processarCodigoRecebido(dto);
