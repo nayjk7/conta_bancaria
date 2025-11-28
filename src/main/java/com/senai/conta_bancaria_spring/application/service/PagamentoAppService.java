@@ -31,7 +31,7 @@ public class PagamentoAppService {
         Conta conta = contaRepository.findByNumeroAndAtivaTrue(dto.numeroConta())
                 .orElseThrow(() -> new EntidadeNaoEncontradoException("Conta"));
 
-        ioTService.validarCodigoBiometrico(conta.getCliente().getId());
+        ioTService.solicitarCodigo(conta.getCliente().getCpf());
 
         List<Taxa> taxas = taxaRepository.findAll();
         var valorTotal = domainService.calcularTotal(dto.valorBoleto(), taxas);

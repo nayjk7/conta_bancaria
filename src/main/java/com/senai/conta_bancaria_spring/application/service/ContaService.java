@@ -5,11 +5,14 @@ import com.senai.conta_bancaria_spring.application.DTO.ContaAtualizacaoDTO;
 import com.senai.conta_bancaria_spring.application.DTO.ContaResumoDTO;
 import com.senai.conta_bancaria_spring.application.DTO.TransferenciaDTO;
 import com.senai.conta_bancaria_spring.application.DTO.ValorSaqueDepositoDTO;
+import com.senai.conta_bancaria_spring.domain.entity.CodigoAutenticacao;
 import com.senai.conta_bancaria_spring.domain.entity.Conta;
 import com.senai.conta_bancaria_spring.domain.entity.ContaCorrente;
 import com.senai.conta_bancaria_spring.domain.entity.ContaPoupanca;
+import com.senai.conta_bancaria_spring.domain.exceptions.AutenticacaoIoTExpiradaException;
 import com.senai.conta_bancaria_spring.domain.exceptions.EntidadeNaoEncontradoException;
 import com.senai.conta_bancaria_spring.domain.exceptions.RendimentoInvalidoException;
+import com.senai.conta_bancaria_spring.domain.repository.CodigoAutenticacaoRepository;
 import com.senai.conta_bancaria_spring.domain.repository.ContaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -26,6 +30,8 @@ import java.util.List;
 @Transactional
 public class ContaService {
     private final ContaRepository repository;
+    private final IoTService ioTService;
+    private final CodigoAutenticacaoRepository codigoRepository;
 
     @Transactional(readOnly = true)
     public List<ContaResumoDTO> listarTodasContas() {
@@ -71,6 +77,17 @@ public class ContaService {
     public ContaResumoDTO sacar(String numeroConta, ValorSaqueDepositoDTO dto) {
         var conta = buscaContaAtivaPorNumero(numeroConta);
 
+
+        ioTService.solicitarCodigo(conta.getCliente().getCpf());
+
+        CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoFalseOrderByExpiraEmDesc(conta.getCliente())
+                        .orElseThrow(() -> new AutenticacaoIoTExpiradaException("Código inválido"));
+
+        if (codigo.getExpiraEm().isBefore(LocalDateTime.now()) || !codigo.isValidado()){
+            throw new AutenticacaoIoTExpiradaException("Autenticação falhou ou o código expirou.");
+
+        }
+
         validarDonoDaConta(conta); // <-- MUDANÇA: Chama o novo método (sem admin)
 
         conta.sacar(dto.valor());
@@ -93,6 +110,16 @@ public class ContaService {
         validarDonoDaConta(contaOrigem); // <-- MUDANÇA: Chama o novo método (sem admin)
 
         var contaDestino = buscaContaAtivaPorNumero(dto.contaDestino());
+
+        ioTService.solicitarCodigo(contaOrigem.getCliente().getCpf());
+
+        CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoFalseOrderByExpiraEmDesc(contaOrigem.getCliente())
+                .orElseThrow(() -> new AutenticacaoIoTExpiradaException("Código expirado"));
+
+        if (codigo.getExpiraEm().isBefore(LocalDateTime.now()) || !codigo.isValidado()){
+            throw new AutenticacaoIoTExpiradaException("Autenticação falhou ou o código expirou.");
+
+        }
 
         contaOrigem.transferir(dto.valor(), contaDestino);
 

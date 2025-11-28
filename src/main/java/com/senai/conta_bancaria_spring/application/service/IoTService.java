@@ -1,15 +1,16 @@
 package com.senai.conta_bancaria_spring.application.service;
 
+import com.rafaelcosta.spring_mqttx.domain.annotation.MqttPayload;
+import com.rafaelcosta.spring_mqttx.domain.annotation.MqttPublisher;
+import com.rafaelcosta.spring_mqttx.domain.annotation.MqttSubscriber;
 import com.senai.conta_bancaria_spring.application.DTO.ValidacaoAuthDTO;
 import com.senai.conta_bancaria_spring.domain.entity.Cliente;
 import com.senai.conta_bancaria_spring.domain.entity.CodigoAutenticacao;
-import com.senai.conta_bancaria_spring.domain.exceptions.AutenticacaoIoTExpiradaException;
 import com.senai.conta_bancaria_spring.domain.exceptions.EntidadeNaoEncontradoException;
 import com.senai.conta_bancaria_spring.domain.repository.ClienteRepository;
 import com.senai.conta_bancaria_spring.domain.repository.CodigoAutenticacaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -19,19 +20,13 @@ public class IoTService {
     private final CodigoAutenticacaoRepository codigoRepository;
     private final ClienteRepository clienteRepository;
 
-    public void validarCodigoBiometrico(String clienteId) {
-        CodigoAutenticacao auth = codigoRepository.findTopByClienteIdAndValidadoFalseOrderByExpiraEmDesc(clienteId)
-                .orElseThrow(AutenticacaoIoTExpiradaException::new);
-
-        if (auth.getExpiraEm().isBefore(LocalDateTime.now())) {
-            throw new AutenticacaoIoTExpiradaException();
+        @MqttPublisher("banco/autenticacao/{clienteCpf}")
+        public void solicitarCodigo(String clienteCpf) {
+            System.out.println("Autenticação enviada para o cliente de CPF: " + clienteCpf);
         }
 
-        auth.setValidado(true);
-        codigoRepository.save(auth);
-    }
-    @Transactional
-    public void processarCodigoRecebido(ValidacaoAuthDTO dto) {
+    @MqttSubscriber("banco/validacao/{clienteCpf}")
+    public void processarCodigoRecebido(@MqttPayload ValidacaoAuthDTO dto) {
         Cliente cliente = clienteRepository.findById(dto.getClienteId())
                 .orElseThrow(() -> new EntidadeNaoEncontradoException("Cliente IoT"));
 
@@ -45,5 +40,7 @@ public class IoTService {
         codigoRepository.save(codigo);
         System.out.println("Código IoT salvo para cliente: " + cliente.getNome());
     }
-}
+
+    }
+
 

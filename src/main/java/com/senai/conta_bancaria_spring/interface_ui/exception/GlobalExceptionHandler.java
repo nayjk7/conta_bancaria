@@ -17,13 +17,15 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static com.senai.conta_bancaria_spring.interface_ui.exception.ProblemDetailUtils.buildProblem;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ValoresNegativoException.class)
     public ProblemDetail handleValoresNegativo(ValoresNegativoException ex,
                                                HttpServletRequest request) {
-        return ProblemDetailUtils.buildProblem(
+        return buildProblem(
                 HttpStatus.BAD_REQUEST,
                 "Valores negativos não são permitidos.",
                 ex.getMessage(),
@@ -34,7 +36,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ContaMesmoTipoException.class)
     public ProblemDetail handleContaMesmoTipo(ContaMesmoTipoException ex,
                                                     HttpServletRequest request) {
-        return ProblemDetailUtils.buildProblem(
+        return buildProblem(
                 HttpStatus.CONFLICT,
                 "Não é possível criar uma conta do mesmo tipo para o mesmo cliente.",
                 ex.getMessage(),
@@ -46,7 +48,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EntidadeNaoEncontradoException.class)
     public ProblemDetail handleEntidadeNaoEncontrado(EntidadeNaoEncontradoException ex,
                                                      HttpServletRequest request) {
-        return ProblemDetailUtils.buildProblem(
+        return buildProblem(
                 HttpStatus.NOT_FOUND,
                 "Entidade não encontrada.",
                 ex.getMessage(),
@@ -57,7 +59,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RendimentoInvalidoException.class)
     public ProblemDetail handleRendimentoInvalido(RendimentoInvalidoException ex,
                                                   HttpServletRequest request) {
-        return ProblemDetailUtils.buildProblem(
+        return buildProblem(
                 HttpStatus.BAD_REQUEST,
                 "Rendimento inválido.",
                 ex.getMessage(),
@@ -68,7 +70,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SaldoinsuficienteException.class)
     public ProblemDetail handleSaldoInsuficiente(SaldoinsuficienteException ex,
                                                  HttpServletRequest request) {
-        return ProblemDetailUtils.buildProblem(
+        return buildProblem(
                 HttpStatus.CONFLICT,
                 "Saldo insuficiente para a operação.",
                 ex.getMessage(),
@@ -80,7 +82,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TipoDeContaInvalidoException.class)
     public ProblemDetail handleTipoDeContaInvalido(TipoDeContaInvalidoException ex,
                                                    HttpServletRequest request) {
-        return ProblemDetailUtils.buildProblem(
+        return buildProblem(
                 HttpStatus.BAD_REQUEST,
                 "Tipo de conta inválido.",
                 ex.getMessage(),
@@ -91,7 +93,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TransferenciaParaMesmaContaException.class)
     public ProblemDetail handleTransferenciaParaMesmaConta(TransferenciaParaMesmaContaException ex,
                                                            HttpServletRequest request) {
-        return ProblemDetailUtils.buildProblem(
+        return buildProblem(
                 HttpStatus.CONFLICT,
                 "Não é possível transferir para a mesma conta.",
                 ex.getMessage(),
@@ -101,7 +103,7 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail badRequest(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        ProblemDetail problem = ProblemDetailUtils.buildProblem(
+        ProblemDetail problem = buildProblem(
                 HttpStatus.BAD_REQUEST,
                 "Erro de validação",
                 "Um ou mais campos são inválidos",
@@ -158,6 +160,16 @@ public class GlobalExceptionHandler {
         problem.setProperty("errors", errors);
         return problem;
     }
+    @ExceptionHandler(AutenticacaoIoTExpiradaException.class)
+    public ProblemDetail handleIoTExpirada(AutenticacaoIoTExpiradaException ex, HttpServletRequest request) {
+        return buildProblem(
+                HttpStatus.FORBIDDEN,
+                "Autenticação Biométrica Necessária",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
 }
 
 
