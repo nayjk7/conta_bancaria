@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-public class PagamentoService {
+public class PagamentoDomainService {
     public BigDecimal calcularTotal(BigDecimal valor, List<Taxa> taxas) {
         BigDecimal total = valor;
         for (Taxa t : taxas) {

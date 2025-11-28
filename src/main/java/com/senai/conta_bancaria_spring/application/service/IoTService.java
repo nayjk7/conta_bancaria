@@ -20,27 +20,24 @@ public class IoTService {
     private final CodigoAutenticacaoRepository codigoRepository;
     private final ClienteRepository clienteRepository;
 
-        @MqttPublisher("banco/autenticacao/{clienteCpf}")
-        public void solicitarCodigo(String clienteCpf) {
-            System.out.println("Autenticação enviada para o cliente de CPF: " + clienteCpf);
-        }
 
-    @MqttSubscriber("banco/validacao/{clienteCpf}")
+    @MqttSubscriber("banco/validacao/+")
     public void processarCodigoRecebido(@MqttPayload ValidacaoAuthDTO dto) {
+
+
         Cliente cliente = clienteRepository.findById(dto.getClienteId())
                 .orElseThrow(() -> new EntidadeNaoEncontradoException("Cliente IoT"));
 
         CodigoAutenticacao codigo = CodigoAutenticacao.builder()
                 .cliente(cliente)
                 .codigo(dto.getCodigoGerado())
-                .validado(false)
+                .validado(true) // Importante: true
                 .expiraEm(LocalDateTime.now().plusMinutes(2))
                 .build();
 
         codigoRepository.save(codigo);
-        System.out.println("Código IoT salvo para cliente: " + cliente.getNome());
+        System.out.println("Código IoT salvo e validado para cliente: " + cliente.getNome());
     }
-
-    }
+}
 
 
