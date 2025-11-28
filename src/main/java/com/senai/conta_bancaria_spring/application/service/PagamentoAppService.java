@@ -35,7 +35,7 @@ public class PagamentoAppService {
 
     @Transactional
     public PagamentoResponseDTO realizarPagamento(PagamentoDTO dto){
-        // 1. Validar Conta
+
         Conta conta = contaRepository.findByNumeroAndAtivaTrue(dto.numeroConta())
                 .orElseThrow(() -> new EntidadeNaoEncontradoException("Conta"));
 
@@ -43,7 +43,7 @@ public class PagamentoAppService {
             throw new PagamentoInvalidoException("Boleto vencido.");
         }
 
-        // 3. Verificar Autenticação IoT (Sem solicitar novamente)
+
         CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoFalseOrderByExpiraEmDesc(conta.getCliente())
                 .orElseThrow(() -> new AutenticacaoIoTExpiradaException("Nenhuma autenticação biométrica encontrada."));
 
@@ -54,11 +54,10 @@ public class PagamentoAppService {
         codigo.setValidado(false);
         codigoRepository.save(codigo);
 
-        List<Taxa> taxas = taxaRepository.findAllByTipo(TipoTaxa.PAGAMENTO); // Filtrar por tipo!
+        List<Taxa> taxas = taxaRepository.findAllByTipo(TipoTaxa.PAGAMENTO);
         var valorTotal = domainService.calcularTotal(dto.valorBoleto(), taxas);
 
-        // 5. Debitar e Salvar
-        conta.sacar(valorTotal); // Já valida saldo
+        conta.sacar(valorTotal);
         contaRepository.save(conta);
 
         Pagamento pag = Pagamento.builder()
