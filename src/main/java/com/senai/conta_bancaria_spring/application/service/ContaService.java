@@ -30,7 +30,6 @@ import java.util.List;
 @Transactional
 public class ContaService {
     private final ContaRepository repository;
-    private final IoTService ioTService;
     private final CodigoAutenticacaoRepository codigoRepository;
 
     @Transactional(readOnly = true)
@@ -76,19 +75,9 @@ public class ContaService {
 
     public ContaResumoDTO sacar(String numeroConta, ValorSaqueDepositoDTO dto) {
         var conta = buscaContaAtivaPorNumero(numeroConta);
+        validarDonoDaConta(conta);
 
-
-        ioTService.solicitarCodigo(conta.getCliente().getCpf());
-
-        CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoFalseOrderByExpiraEmDesc(conta.getCliente())
-                        .orElseThrow(() -> new AutenticacaoIoTExpiradaException("Código inválido"));
-
-        if (codigo.getExpiraEm().isBefore(LocalDateTime.now()) || !codigo.isValidado()){
-            throw new AutenticacaoIoTExpiradaException("Autenticação falhou ou o código expirou.");
-
-        }
-
-        validarDonoDaConta(conta); // <-- MUDANÇA: Chama o novo método (sem admin)
+        consumirCodigoIoT(conta);
 
         conta.sacar(dto.valor());
         return ContaResumoDTO.fromEntity(repository.save(conta));
@@ -96,8 +85,7 @@ public class ContaService {
 
     public ContaResumoDTO depositar(String numeroConta, ValorSaqueDepositoDTO dto) {
         var conta = buscaContaAtivaPorNumero(numeroConta);
-
-        validarDonoDaConta(conta); // <-- MUDANÇA: Chama o novo método (sem admin)
+        validarDonoDaConta(conta);
 
         conta.depositar(dto.valor());
         return ContaResumoDTO.fromEntity(repository.save(conta));
@@ -106,20 +94,11 @@ public class ContaService {
     public ContaResumoDTO transferir(String numeroConta, TransferenciaDTO dto) {
         var contaOrigem = buscaContaAtivaPorNumero(numeroConta);
 
-        // VERIFICAÇÃO IMPORTANTE: Só pode transferir se for dono da conta de ORIGEM
-        validarDonoDaConta(contaOrigem); // <-- MUDANÇA: Chama o novo método (sem admin)
-
+       //Só pode transferir se for dono da conta de ORIGEM
+        validarDonoDaConta(contaOrigem);
         var contaDestino = buscaContaAtivaPorNumero(dto.contaDestino());
 
-        ioTService.solicitarCodigo(contaOrigem.getCliente().getCpf());
-
-        CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoFalseOrderByExpiraEmDesc(contaOrigem.getCliente())
-                .orElseThrow(() -> new AutenticacaoIoTExpiradaException("Código expirado"));
-
-        if (codigo.getExpiraEm().isBefore(LocalDateTime.now()) || !codigo.isValidado()){
-            throw new AutenticacaoIoTExpiradaException("Autenticação falhou ou o código expirou.");
-
-        }
+        consumirCodigoIoT(contaOrigem);
 
         contaOrigem.transferir(dto.valor(), contaDestino);
 
@@ -129,8 +108,7 @@ public class ContaService {
 
     public ContaResumoDTO aplicarRendimento(String numeroDaConta) {
         var conta = buscaContaAtivaPorNumero(numeroDaConta);
-
-        validarDonoDaConta(conta); // <-- MUDANÇA: Chama o novo método (sem admin)
+        validarDonoDaConta(conta);
 
         if (conta instanceof ContaPoupanca poupanca) {
             poupanca.aplicarRendimento();
@@ -139,14 +117,29 @@ public class ContaService {
         throw new RendimentoInvalidoException();
     }
 
-    // MÉTODO ANTIGO (Permite Admin) - MANTENHA ELE
-    // Ele ainda é usado por buscarContaPorNumero, atualizarConta e deletarConta
-    private void validarDonoDaContaOuAdmin(Conta conta) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            throw new AccessDeniedException("Usuário não autenticado.");
+    private void consumirCodigoIoT(Conta conta) {
+        // Busca o último código que JÁ FOI VALIDADO pelo dispositivo (ValidadoTrue)
+        CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoTrueOrderByExpiraEmDesc(conta.getCliente())
+                .orElseThrow(() -> new AutenticacaoIoTExpiradaException("Nenhuma autenticação biométrica válida encontrada. Solicite via App."));
+
+        if (codigo.getExpiraEm().isBefore(LocalDateTime.now())) {
+            throw new AutenticacaoIoTExpiradaException("O código biométrico expirou.");
         }
 
+        // Invalida o código para não ser reutilizado (One-time use)
+        codigo.setValidado(false);
+        codigoRepository.save(codigo);
+    }
+    private Conta buscarContaAtivaPorNumero(String numeroDaConta) {
+        return repository.findByNumeroAndAtivaTrue(numeroDaConta).orElseThrow(
+                () -> new EntidadeNaoEncontradoException("Conta")
+        );
+    }
+
+
+    private void validarDonoDaContaOuAdmin(Conta conta) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) throw new AccessDeniedException("Usuário não autenticado.");
         String emailUsuarioLogado = authentication.getName();
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(r -> r.getAuthority().equals("ROLE_ADMIN"));
@@ -156,18 +149,10 @@ public class ContaService {
         }
     }
 
-    // --- NOVO MÉTODO PRIVADO (Apenas Cliente) ---
     private void validarDonoDaConta(Conta conta) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            throw new AccessDeniedException("Usuário não autenticado.");
-        }
-
-        String emailUsuarioLogado = authentication.getName();
-
-        // Se o email do dono da conta for DIFERENTE do email do usuário logado
-        if (!conta.getCliente().getEmail().equals(emailUsuarioLogado)) {
-            // Não há verificação "isAdmin" aqui
+        if (authentication == null) throw new AccessDeniedException("Usuário não autenticado.");
+        if (!conta.getCliente().getEmail().equals(authentication.getName())) {
             throw new AccessDeniedException("Acesso negado: Esta conta não pertence ao usuário logado.");
         }
     }

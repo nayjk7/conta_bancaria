@@ -16,6 +16,9 @@ import com.senai.conta_bancaria_spring.domain.repository.PagamentoRepository;
 import com.senai.conta_bancaria_spring.domain.repository.TaxaRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -39,16 +42,16 @@ public class PagamentoAppService {
         Conta conta = contaRepository.findByNumeroAndAtivaTrue(dto.numeroConta())
                 .orElseThrow(() -> new EntidadeNaoEncontradoException("Conta"));
 
+        validarDonoDaConta(conta);
+
         if (dto.dataVencimento() != null && dto.dataVencimento().isBefore(LocalDate.now())) {
             throw new PagamentoInvalidoException("Boleto vencido.");
         }
 
-
-        CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoFalseOrderByExpiraEmDesc(conta.getCliente())
+        CodigoAutenticacao codigo = codigoRepository.findTopByClienteAndValidadoTrueOrderByExpiraEmDesc(conta.getCliente())
                 .orElseThrow(() -> new AutenticacaoIoTExpiradaException("Nenhuma autenticação biométrica encontrada."));
-
-        if (!codigo.isValidado() || codigo.getExpiraEm().isBefore(LocalDateTime.now())){
-            throw new AutenticacaoIoTExpiradaException("Autenticação expirada ou inválida.");
+        if (codigo.getExpiraEm().isBefore(LocalDateTime.now())){
+            throw new AutenticacaoIoTExpiradaException("Autenticação expirada.");
         }
 
         codigo.setValidado(false);
@@ -71,4 +74,14 @@ public class PagamentoAppService {
 
         return PagamentoResponseDTO.fromEntity(pagamentoRepository.save(pag));
     }
+    private void validarDonoDaConta(Conta conta) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new AccessDeniedException("Usuário não autenticado.");
+        }
+        if (!conta.getCliente().getEmail().equals(authentication.getName())) {
+            throw new AccessDeniedException("Acesso negado: Esta conta não pertence ao usuário logado.");
+        }
+    }
+}
 }

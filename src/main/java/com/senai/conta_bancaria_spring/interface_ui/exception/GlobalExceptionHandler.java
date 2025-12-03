@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ContaMesmoTipoException.class)
     public ProblemDetail handleContaMesmoTipo(ContaMesmoTipoException ex,
-                                                    HttpServletRequest request) {
+                                              HttpServletRequest request) {
         return buildProblem(
                 HttpStatus.CONFLICT,
                 "Não é possível criar uma conta do mesmo tipo para o mesmo cliente.",
@@ -101,6 +101,7 @@ public class GlobalExceptionHandler {
         );
 
     }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail badRequest(MethodArgumentNotValidException ex, HttpServletRequest request) {
         ProblemDetail problem = buildProblem(
@@ -121,6 +122,7 @@ public class GlobalExceptionHandler {
         problem.setProperty("errors", errors);
         return problem;
     }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -134,6 +136,7 @@ public class GlobalExceptionHandler {
         problem.setInstance(URI.create(request.getRequestURI()));
         return problem;
     }
+
     @ExceptionHandler(ConversionFailedException.class)
     public ProblemDetail handleConversionFailed(ConversionFailedException ex, HttpServletRequest request) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -160,6 +163,7 @@ public class GlobalExceptionHandler {
         problem.setProperty("errors", errors);
         return problem;
     }
+
     @ExceptionHandler(AutenticacaoIoTExpiradaException.class)
     public ProblemDetail handleIoTExpirada(AutenticacaoIoTExpiradaException ex, HttpServletRequest request) {
         return buildProblem(
@@ -170,6 +174,27 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(PagamentoInvalidoException.class)
+    public ProblemDetail handlePagamentoInvalido(PagamentoInvalidoException ex, HttpServletRequest request) {
+        return buildProblem(
+                HttpStatus.BAD_REQUEST,
+                "Erro no processamento do pagamento",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(TaxaInvalidaException.class)
+    public ProblemDetail handleTaxaInvalida(TaxaInvalidaException ex, HttpServletRequest request) {
+        return buildProblem(
+                HttpStatus.BAD_REQUEST,
+                "Taxa inválida",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
 }
+
+
 
 
