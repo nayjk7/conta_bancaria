@@ -7,6 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface TaxaRepository extends JpaRepository<Taxa, String> {
-    List<Taxa> findByTipo(TipoTaxa tipo);
+    List<Taxa> findAllByTipo(TipoTaxa tipo);
 }
 

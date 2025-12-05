@@ -3,6 +3,7 @@ package com.senai.conta_bancaria_spring.infrastructure.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.senai.conta_bancaria_spring.application.DTO.ValidacaoAuthDTO;
 import com.senai.conta_bancaria_spring.application.service.IoTService;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,7 +30,6 @@ public class MqttConfig {
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
 
-        // Configuração das opções de conexão
         MqttConnectOptions options = new MqttConnectOptions();
         options.setServerURIs(new String[]{brokerUrl});
         options.setConnectionTimeout(10); // Timeout em segundos
