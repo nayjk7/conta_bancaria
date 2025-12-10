@@ -2,7 +2,6 @@ package com.senai.conta_bancaria_spring.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.Id;
 
 @Entity
 @Getter
